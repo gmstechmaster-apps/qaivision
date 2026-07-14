@@ -40,6 +40,13 @@ function redact(value: string | undefined, ctx: ExecutorContext): string | undef
 }
 
 async function screenshotBase64(ctx: ExecutorContext, tag: string): Promise<{ base64: string; path: string }> {
+  // Best-effort settle wait before every screenshot: page.goto only waits for
+  // "domcontentloaded", which fires before a JS-rendered storefront (React/
+  // Angular-style SPA) has actually painted its content, so a screenshot taken
+  // immediately after navigation (or after a client-side route change from a
+  // click) can be genuinely blank. Waiting for network idle catches most of
+  // that without blocking indefinitely on sites with persistent polling/websockets.
+  await ctx.page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => undefined);
   const buf = await ctx.page.screenshot();
   const base64 = buf.toString("base64");
   const filePath = `${ctx.screenshotDir}/${Date.now()}-${tag}.png`;
