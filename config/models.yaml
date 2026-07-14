@@ -3,13 +3,14 @@
 # This file is read fresh on every run — switching models never requires a
 # code change or rebuild. You can also override per-run without touching
 # this file:
-#   aiqa run --env dev --site demo-store --scenario smoke --vision-model qwen3-vl:32b
-#   AIQA_VISION_MODEL=qwen3-vl:32b aiqa run ...
+#   npm run run -- --env dev --site <site> --scenario smoke --vision-model qwen3-vl:32b
+#   AIQA_VISION_MODEL=qwen3-vl:32b npm run run -- --env dev --site <site> --scenario smoke
 #
-# Spec-recommended models (section 4/5) are qwen3-coder:32b and qwen3-vl:32b.
-# This sandbox only has ~12GB disk, so it defaults to smaller local models
-# that are actually pulled here. Point `vision.model` / `planner.model` at
-# the 32b models on a machine with enough disk/VRAM and nothing else changes.
+# Spec-recommended models are qwen3-coder:30b (planner, MoE, ~3B active
+# params — much lighter than a dense model of the same total size) and
+# qwen3-vl:32b (vision). Defaults below are smaller local models sized for
+# a modest disk/VRAM machine; point planner.model / vision.model at the
+# recommended models on a machine with enough headroom and nothing else changes.
 
 ollama:
   host: http://localhost:11434
