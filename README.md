@@ -116,12 +116,17 @@ models on a machine with enough headroom and everything else is unchanged.
 Planning (one LLM call per `.nlp` instruction line) is the slowest part of a run
 with larger local models, so the generated plan is cached at
 `.aiqa-cache/plans/{env}-{site}-{scenario}.json`, keyed to a hash of the `.nlp`
-file's raw text + resolved `baseUrl` + planner model name. If none of those changed
-since the plan was last generated, the cached plan is reused instantly and no LLM
-calls happen during planning at all. Edit the `.nlp` file (or change the site's
+file's raw text + resolved `baseUrl` + planner model name + the planner's internal
+logic version (so a qaivision code update always invalidates old cache entries
+too, never just an unnoticed stale replay). If none of those changed since the
+plan was last generated, the cached plan is reused instantly and no LLM calls
+happen during planning at all. Edit the `.nlp` file (or change the site's
 `baseUrl`, or switch planner models) and the hash no longer matches, so the next
 run regenerates automatically — there's no way for a stale plan to silently run.
-Pass `--no-plan-cache` to force regeneration regardless.
+
+Controlled by `--mode`:
+- `execute` (default) — reuse the cached plan if it's still valid, else generate and cache it.
+- `plan-and-execute` — delete any cached plan for this env/site/scenario and regenerate fresh before running.
 
 ## Running
 
@@ -129,12 +134,13 @@ Pass `--no-plan-cache` to force regeneration regardless.
 npm run run -- --env dev --site <site> --scenario smoke
 npm run run -- --env stg --site <site> --scenario smoke
 npm run run -- --env prd --site all --scenario complete-e2e   # every site under tests/prd/
+npm run run -- --env dev --site <site> --scenario smoke --mode plan-and-execute   # force a fresh plan
 ```
 
 Flags: `--headed` (show the browser), `--live-port <port>`, `--no-live` (skip the
 live viewer server), `--verbose` (print every Ollama request/response live),
-`--no-plan-cache` (always regenerate the plan), `--planner-model` / `--vision-model`
-(override for one run).
+`--mode execute|plan-and-execute` (plan caching, see above), `--planner-model` /
+`--vision-model` (override for one run).
 
 ## Run artifacts / replay
 

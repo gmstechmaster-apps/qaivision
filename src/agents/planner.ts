@@ -3,6 +3,16 @@ import type { NlpScenario, NlpStep } from "./nlp-parser.js";
 import { ollamaGenerate } from "./ollama-client.js";
 import type { ActionIntent, ExecutionPlan, PlannedAction } from "./types.js";
 
+/**
+ * Bump this whenever planStep's logic changes in a way that would produce a
+ * different plan for the same .nlp text (new special-case, prompt/few-shot
+ * change, etc.). It's folded into the plan cache's hash key so a qaivision
+ * code update always invalidates old cached plans, even when the .nlp file,
+ * baseUrl, and planner model are all unchanged — a code fix can never be
+ * silently masked by a stale cache entry.
+ */
+export const PLANNER_LOGIC_VERSION = 2;
+
 const SYSTEM_PROMPT = `You are the Planner Agent in an AI QA platform for e-commerce storefronts.
 You convert ONE natural-language QA instruction into a JSON array of atomic browser actions.
 
