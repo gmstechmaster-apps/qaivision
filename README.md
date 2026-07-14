@@ -1,0 +1,160 @@
+# qaivision
+
+An AI-native testing platform for SAP Commerce Cloud multisite storefronts.
+
+There are no static Playwright test files. **Natural-language `.nlp` files are the
+only test definition.** On every run, the platform reads the `.nlp` scenario, asks a
+local LLM (the **Planner Agent**) to turn it into a JSON execution plan, then walks
+that plan step by step — a local vision-language model (the **Vision Agent**) looks
+at a live screenshot to find each element and validate results, and Playwright only
+ever performs mechanical actions (click/type/scroll/select/navigate/upload). Nothing
+is cached between runs: edit the `.nlp` file and the very next run behaves
+differently, with no code changes.
+
+```
+NLP Scenario → Planner Agent → Execution Plan → Vision Agent → Playwright Executor
+                                                                        ↓
+                                          Reporter ← Validation Agent ← Browser
+```
+
+## Quick start (new machine)
+
+Prerequisites: [Node.js 20+](https://nodejs.org), [Ollama](https://ollama.com/download).
+
+```bash
+./setup.sh
+```
+
+This installs npm dependencies, installs Playwright's Chromium browser, starts
+`ollama serve` if it isn't already running, and pulls the two models referenced in
+`config/models.yaml`.
+
+Then configure a real site (see **Configuration** below) and run a scenario:
+
+```bash
+npm run run -- --env dev --site kabi-us --scenario smoke
+```
+
+The command prints a **live viewer URL** (default `http://localhost:4180`) — open it
+in a browser to watch the run: current step, live screenshot, the vision model's
+reasoning, and its confidence score, updating as each action executes.
+
+## Writing test cases
+
+Test cases are plain text `.nlp` files under `tests/{env}/{site}/{scenario}.nlp`:
+
+```
+tests/
+    dev/
+        kabi-us/
+            complete-e2e.nlp
+            smoke.nlp
+        fresubin-uk/
+            complete-e2e.nlp
+    stg/...
+    prd/...
+```
+
+A file starts with three required front-matter lines, then one instruction per line
+in plain business language, plus optional `Verify:` blocks:
+
+```
+environment: dev
+site: kabi-us
+scenario: smoke
+
+Search for the configured product.
+
+Open the first purchasable product.
+
+Verify:
+- product name exists
+- product code exists
+```
+
+Nothing here is Playwright syntax — the Planner Agent decomposes each line into
+concrete actions at runtime. To add a new test, just add a new `.nlp` file; to
+change what an existing test does, edit its text. No code changes, no rebuild.
+
+## Configuration
+
+| File | Purpose |
+|---|---|
+| `config/models.yaml` | Which Ollama models the Planner and Vision agents use. |
+| `config/sites.yaml` | Base storefront URL per `env`/`site`. |
+| `config/products.yaml` | The product under test per `env`/`site` (`{{product}}` in plans). |
+| `config/credentials.yaml` | Login credentials per `env`/`site` (`{{username}}`/`{{password}}`). Gitignored — copy from `config/credentials.example.yaml`. |
+
+Before running against `kabi-us` / `fresubin-uk` (or any new site), fill in its real
+`baseUrl` in `sites.yaml`, its product under test in `products.yaml`, and real
+credentials in `credentials.yaml` (copy `config/credentials.example.yaml` if you
+haven't already — `setup.sh` does this for you).
+
+### Switching models at any time
+
+Model selection is re-read on every run — no code change or rebuild needed:
+
+```bash
+# edit config/models.yaml, or override per-run:
+npm run run -- --env dev --site kabi-us --scenario smoke --vision-model qwen3-vl:32b
+AIQA_VISION_MODEL=qwen3-vl:32b npm run run -- --env dev --site kabi-us --scenario smoke
+```
+
+The spec's recommended models are `qwen3-coder:32b` (planner) and `qwen3-vl:32b`
+(vision). `config/models.yaml` currently defaults to smaller local models
+(`qwen2.5-coder:3b` / `qwen3-vl:8b`) to fit modest disk/VRAM — point it at the 32b
+models on a machine with enough headroom and everything else is unchanged.
+
+## Running
+
+```bash
+npm run run -- --env dev --site kabi-us --scenario smoke
+npm run run -- --env stg --site fresubin-uk --scenario smoke
+npm run run -- --env prd --site all --scenario complete-e2e   # every site under tests/prd/
+```
+
+Flags: `--headed` (show the browser), `--live-port <port>`, `--no-live` (skip the
+live viewer server), `--planner-model` / `--vision-model` (override for one run).
+
+## Run artifacts / replay
+
+Every run writes to `runs/run-{date}-{seq}-{site}-{scenario}/`:
+
+```
+screenshots/     one PNG per action
+html/index.html  step-by-step replay (screenshot + reasoning per step)
+report.json      machine-readable summary + per-step attempts
+reasoning.log     newline-delimited JSON of every AI decision made during the run
+status.json      live status consumed by the live viewer while the run is active
+```
+
+## Recovery strategy
+
+If the Vision Agent can't confidently act on a step, the executor walks a ladder
+before failing the step: fresh screenshot → DOM accessibility scan → heuristic DOM
+locators → vision-estimated coordinates → alternate workflow (e.g. Tab+type,
+Enter-to-submit). Each attempt is logged with its reasoning and confidence in
+`reasoning.log` / `report.json`.
+
+## Project layout
+
+```
+config/                 models / sites / products / credentials
+tests/{env}/{site}/     .nlp scenarios — the only test definitions
+src/agents/             NLP parser, Planner Agent, Vision Agent, Ollama client
+src/executor/           Playwright action executor + recovery ladder
+src/reporter/           report.json / replay HTML / live viewer server
+src/cli/run.ts          `aiqa run --env --site --scenario`
+runs/                   per-run artifacts (gitignored except .gitkeep)
+```
+
+## Known limitations
+
+- Default models are small (3B/8B) to fit modest disk/VRAM; expect materially
+  better accuracy from `qwen3-coder:32b` / `qwen3-vl:32b` on adequate hardware.
+- Vision calls are the slowest part of each run — a GPU with enough free VRAM to
+  fully offload the vision model will be significantly faster than a partial
+  CPU/GPU split.
+- `config/sites.yaml` / `products.yaml` / `credentials.yaml` ship with placeholder
+  values for `kabi-us` / `fresubin-uk` — fill in real ones before testing against
+  the live sites.

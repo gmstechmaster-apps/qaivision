@@ -1,0 +1,20 @@
+# Product under test, configurable per environment and site (spec section 10).
+# NLP scenarios refer to "the configured product" — the Planner Agent resolves
+# the actual product name from here at runtime.
+
+products:
+  dev:
+    kabi-us:
+      product: Sodium Chloride
+    fresubin-uk:
+      product: Fresubin Original
+  stg:
+    kabi-us:
+      product: Sodium Chloride
+    fresubin-uk:
+      product: Fresubin Original
+  prd:
+    kabi-us:
+      product: Sodium Chloride
+    fresubin-uk:
+      product: Fresubin Original

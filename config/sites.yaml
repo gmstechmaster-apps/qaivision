@@ -1,0 +1,19 @@
+# Base storefront URL per environment/site. The Planner Agent resolves the
+# starting URL for a scenario from here — never hardcoded in NLP or code.
+
+sites:
+  dev:
+    kabi-us:
+      baseUrl: https://dev.kabi-us.example.com
+    fresubin-uk:
+      baseUrl: https://dev.fresubin-uk.example.com
+  stg:
+    kabi-us:
+      baseUrl: https://stg.kabi-us.example.com
+    fresubin-uk:
+      baseUrl: https://stg.fresubin-uk.example.com
+  prd:
+    kabi-us:
+      baseUrl: https://www.kabi-us.com
+    fresubin-uk:
+      baseUrl: https://www.fresubin-uk.com

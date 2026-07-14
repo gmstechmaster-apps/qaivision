@@ -1,0 +1,26 @@
+# Model configuration for the Planner (coding) agent and Vision agent.
+#
+# This file is read fresh on every run — switching models never requires a
+# code change or rebuild. You can also override per-run without touching
+# this file:
+#   aiqa run --env dev --site demo-store --scenario smoke --vision-model qwen3-vl:32b
+#   AIQA_VISION_MODEL=qwen3-vl:32b aiqa run ...
+#
+# Spec-recommended models (section 4/5) are qwen3-coder:32b and qwen3-vl:32b.
+# This sandbox only has ~12GB disk, so it defaults to smaller local models
+# that are actually pulled here. Point `vision.model` / `planner.model` at
+# the 32b models on a machine with enough disk/VRAM and nothing else changes.
+
+ollama:
+  host: http://localhost:11434
+  requestTimeoutMs: 120000
+
+planner:
+  # Recommended: qwen3-coder:32b
+  model: qwen2.5-coder:3b
+  temperature: 0.1
+
+vision:
+  # Recommended: qwen3-vl:32b
+  model: qwen3-vl:8b
+  temperature: 0.1

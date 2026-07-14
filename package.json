@@ -1,0 +1,27 @@
+{
+  "name": "qaivision",
+  "version": "0.1.0",
+  "description": "AI-native testing platform for SAP Commerce Cloud multisite storefronts. Tests are natural language; execution plans and Playwright actions are generated at runtime.",
+  "type": "module",
+  "bin": {
+    "aiqa": "./dist/cli/run.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "run": "tsx src/cli/run.ts",
+    "test": "tsx src/cli/run.ts"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "express": "^4.21.0",
+    "js-yaml": "^4.1.0",
+    "playwright": "^1.48.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
