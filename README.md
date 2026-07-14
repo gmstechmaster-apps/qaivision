@@ -78,10 +78,18 @@ change what an existing test does, edit its text. No code changes, no rebuild.
 Any instruction containing "login"/"log in" is handled deterministically instead
 of going through the LLM: it always navigates straight to `{baseUrl}{loginPath}`
 (`loginPath` defaults to `/login`, configurable per site — see **Configuration**),
-then types `{{username}}`/`{{password}}` and clicks the login button. This is
-faster and more reliable than asking the model to find a login link to click,
-since the URL is already known instead of guessed (and previously, occasionally
-hallucinated).
+then types `{{username}}`/`{{password}}` and clicks the login button. Instructions
+mentioning "home page" are handled the same way, navigating straight to `baseUrl`.
+This is faster and more reliable than asking the model to guess a link to click,
+since the URL is already known instead of guessed.
+
+More generally: the per-instruction LLM call is never told what `baseUrl` is, so
+it can never legitimately produce a trustworthy on-site URL on its own — only
+missing values or invented ones. Any `navigate` action it proposes is checked
+against `baseUrl`'s origin, and anything that isn't verifiably same-origin (missing,
+malformed, or a different domain entirely) is automatically downgraded to a `click`
+against the current live page instead. The browser can never be sent off-site or
+to a hallucinated domain by a planner mistake.
 
 ## Configuration
 

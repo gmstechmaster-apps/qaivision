@@ -11,7 +11,7 @@ import type { ActionIntent, ExecutionPlan, PlannedAction } from "./types.js";
  * baseUrl, and planner model are all unchanged — a code fix can never be
  * silently masked by a stale cache entry.
  */
-export const PLANNER_LOGIC_VERSION = 2;
+export const PLANNER_LOGIC_VERSION = 3;
 
 const SYSTEM_PROMPT = `You are the Planner Agent in an AI QA platform for e-commerce storefronts.
 You convert ONE natural-language QA instruction into a JSON array of atomic browser actions.
@@ -118,6 +118,22 @@ async function planStep(
     ];
   }
 
+  // Same reasoning as login: the storefront home page is always exactly
+  // baseUrl, a known fact, not something to ask the model to guess.
+  if (/\bhome\s?page\b|\bstorefront\s+home\b/i.test(step.text)) {
+    return [
+      {
+        id: nextId(),
+        step: step.text,
+        intent: "navigate",
+        target: ctx.baseUrl,
+        value: ctx.baseUrl,
+        expected: "Homepage is loaded",
+        retries: 2,
+      },
+    ];
+  }
+
   const prompt = `${FEW_SHOT}\n\nInstruction: "${step.text}"\nOutput:`;
 
   const { json } = await ollamaGenerate({
@@ -132,7 +148,7 @@ async function planStep(
     label: "planner",
   });
 
-  const parsed = normalizePlannerOutput(json);
+  const parsed = enforceOnSiteNavigation(normalizePlannerOutput(json), ctx.baseUrl);
   if (parsed.length === 0) {
     // Deterministic fallback keeps the run alive if the local model returns
     // malformed output; the instruction is still executed as a single
@@ -182,6 +198,36 @@ function normalizePlannerOutput(json: unknown): Omit<PlannedAction, "id" | "step
     });
   }
   return out;
+}
+
+function isSameOrigin(url: string, baseUrl: string): boolean {
+  try {
+    return new URL(url).origin === new URL(baseUrl).origin;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The general per-instruction LLM call is never told what baseUrl is — it
+ * only ever sees the instruction text — so any "navigate" value it produces
+ * is either missing or invented; it can never legitimately be a trustworthy
+ * on-site URL. Rather than risk the browser being sent to a hallucinated or
+ * off-site domain, any navigate action that isn't verifiably same-origin as
+ * baseUrl is downgraded to a click against the current live page instead.
+ * (The deterministic login/homepage special-cases above, and the implicit
+ * first action, bypass this because they build their URL from baseUrl
+ * directly and never go through the LLM at all.)
+ */
+function enforceOnSiteNavigation(
+  actions: Omit<PlannedAction, "id" | "step">[],
+  baseUrl: string,
+): Omit<PlannedAction, "id" | "step">[] {
+  return actions.map((a) => {
+    if (a.intent !== "navigate") return a;
+    if (a.value && isSameOrigin(a.value, baseUrl)) return a;
+    return { ...a, intent: "click", value: undefined, target: a.target ?? a.value ?? a.expected };
+  });
 }
 
 /**
