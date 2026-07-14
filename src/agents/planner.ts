@@ -142,7 +142,11 @@ function normalizePlannerOutput(json: unknown): Omit<PlannedAction, "id" | "step
  */
 export async function generatePlan(
   scenario: NlpScenario,
-  ctx: { baseUrl: string; models: ModelsConfig },
+  ctx: {
+    baseUrl: string;
+    models: ModelsConfig;
+    onStepPlanned?: (info: { index: number; total: number; step: string; durationMs: number }) => void;
+  },
 ): Promise<ExecutionPlan> {
   const actions: PlannedAction[] = [
     {
@@ -156,9 +160,12 @@ export async function generatePlan(
     },
   ];
 
-  for (const step of scenario.steps) {
+  const total = scenario.steps.length;
+  for (const [index, step] of scenario.steps.entries()) {
+    const start = Date.now();
     const stepActions = await planStep(step, ctx);
     actions.push(...stepActions);
+    ctx.onStepPlanned?.({ index: index + 1, total, step: step.text, durationMs: Date.now() - start });
   }
 
   return {

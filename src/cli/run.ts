@@ -59,7 +59,13 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
 
   console.log(`Reading NLP scenario: ${nlpFile}`);
   console.log(`Generating execution plan at runtime via ${models.planner.model} ...`);
-  const plan = await generatePlan(scenarioDef, { baseUrl, models });
+  const plan = await generatePlan(scenarioDef, {
+    baseUrl,
+    models,
+    onStepPlanned: ({ index, total, step, durationMs }) => {
+      console.log(`  [plan ${index}/${total}] (${(durationMs / 1000).toFixed(1)}s) ${step}`);
+    },
+  });
   console.log(`Execution plan generated: ${plan.actions.length} actions (not cached, regenerated every run)`);
 
   const paths = await createRunPaths(RUNS_DIR, `${site}-${scenario}`);
