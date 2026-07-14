@@ -219,6 +219,16 @@ current screenshot.
 
 ## 8. Notable design decisions worth knowing before changing things
 
+- **`config/models.yaml`'s `ollama.host` defaults to `http://127.0.0.1:11434`, not
+  `localhost`** — this was a real, reported failure: on at least one Mac setup,
+  `localhost` resolved to IPv6 (`::1`) while Ollama only listened on IPv4, so
+  requests never reached the server at all. This looked exactly like Ollama
+  "staying idle" in Activity Monitor while qaivision hung with no error — very
+  confusing to debug from the symptom alone. `restart-ollama.sh` kills any running
+  Ollama process and restarts it explicitly bound to the same `127.0.0.1` address,
+  so client and server are guaranteed to agree. If a future environment needs a
+  non-default host (remote Ollama, Docker, etc.), use `AIQA_OLLAMA_HOST` or edit
+  `models.yaml` directly rather than relying on `localhost` resolution.
 - **Ollama's `format:"json"` is deliberately NOT used** (`ollama-client.ts`). It
   measurably breaks structured output for the smaller local models tested here —
   collapses array output to a single object, or returns an empty string entirely for
