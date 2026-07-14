@@ -3,17 +3,11 @@
 
 sites:
   dev:
-    kabi-us:
-      baseUrl: https://dev.kabi-us.example.com
-    fresubin-uk:
-      baseUrl: https://dev.fresubin-uk.example.com
+    example-site:
+      baseUrl: https://dev.example-site.example.com
   stg:
-    kabi-us:
-      baseUrl: https://stg.kabi-us.example.com
-    fresubin-uk:
-      baseUrl: https://stg.fresubin-uk.example.com
+    example-site:
+      baseUrl: https://stg.example-site.example.com
   prd:
-    kabi-us:
-      baseUrl: https://www.kabi-us.com
-    fresubin-uk:
-      baseUrl: https://www.fresubin-uk.com
+    example-site:
+      baseUrl: https://www.example-site.com

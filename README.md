@@ -32,7 +32,7 @@ This installs npm dependencies, installs Playwright's Chromium browser, starts
 Then configure a real site (see **Configuration** below) and run a scenario:
 
 ```bash
-npm run run -- --env dev --site kabi-us --scenario smoke
+npm run run -- --env dev --site <site> --scenario <scenario>
 ```
 
 The command prints a **live viewer URL** (default `http://localhost:4180`) — open it
@@ -46,11 +46,9 @@ Test cases are plain text `.nlp` files under `tests/{env}/{site}/{scenario}.nlp`
 ```
 tests/
     dev/
-        kabi-us/
+        <site>/
             complete-e2e.nlp
             smoke.nlp
-        fresubin-uk/
-            complete-e2e.nlp
     stg/...
     prd/...
 ```
@@ -60,7 +58,7 @@ in plain business language, plus optional `Verify:` blocks:
 
 ```
 environment: dev
-site: kabi-us
+site: <site>
 scenario: smoke
 
 Search for the configured product.
@@ -85,10 +83,11 @@ change what an existing test does, edit its text. No code changes, no rebuild.
 | `config/products.yaml` | The product under test per `env`/`site` (`{{product}}` in plans). |
 | `config/credentials.yaml` | Login credentials per `env`/`site` (`{{username}}`/`{{password}}`). Gitignored — copy from `config/credentials.example.yaml`. |
 
-Before running against `kabi-us` / `fresubin-uk` (or any new site), fill in its real
-`baseUrl` in `sites.yaml`, its product under test in `products.yaml`, and real
-credentials in `credentials.yaml` (copy `config/credentials.example.yaml` if you
-haven't already — `setup.sh` does this for you).
+Before running against a site, fill in its real `baseUrl` in `sites.yaml`, its
+product under test in `products.yaml`, and real credentials in `credentials.yaml`
+(copy `config/credentials.example.yaml` if you haven't already — `setup.sh` does
+this for you). To add another site, add matching entries to all three files plus a
+`tests/{env}/{site}/` directory with its `.nlp` scenarios.
 
 ### Switching models at any time
 
@@ -96,8 +95,8 @@ Model selection is re-read on every run — no code change or rebuild needed:
 
 ```bash
 # edit config/models.yaml, or override per-run:
-npm run run -- --env dev --site kabi-us --scenario smoke --vision-model qwen3-vl:32b
-AIQA_VISION_MODEL=qwen3-vl:32b npm run run -- --env dev --site kabi-us --scenario smoke
+npm run run -- --env dev --site <site> --scenario smoke --vision-model qwen3-vl:32b
+AIQA_VISION_MODEL=qwen3-vl:32b npm run run -- --env dev --site <site> --scenario smoke
 ```
 
 The spec's recommended models are `qwen3-coder:32b` (planner) and `qwen3-vl:32b`
@@ -108,8 +107,8 @@ models on a machine with enough headroom and everything else is unchanged.
 ## Running
 
 ```bash
-npm run run -- --env dev --site kabi-us --scenario smoke
-npm run run -- --env stg --site fresubin-uk --scenario smoke
+npm run run -- --env dev --site <site> --scenario smoke
+npm run run -- --env stg --site <site> --scenario smoke
 npm run run -- --env prd --site all --scenario complete-e2e   # every site under tests/prd/
 ```
 
@@ -156,5 +155,4 @@ runs/                   per-run artifacts (gitignored except .gitkeep)
   fully offload the vision model will be significantly faster than a partial
   CPU/GPU split.
 - `config/sites.yaml` / `products.yaml` / `credentials.yaml` ship with placeholder
-  values for `kabi-us` / `fresubin-uk` — fill in real ones before testing against
-  the live sites.
+  values — fill in real ones before testing against a live site.

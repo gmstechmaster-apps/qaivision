@@ -40,6 +40,6 @@ fi
 echo ""
 echo "Setup complete."
 echo "  1. Fill in config/sites.yaml, config/products.yaml, config/credentials.yaml for your site."
-echo "  2. npm run run -- --env dev --site kabi-us --scenario smoke"
+echo "  2. npm run run -- --env dev --site <your-site> --scenario <your-scenario>"
 echo ""
 echo "Then open the live viewer URL printed by the run (default http://localhost:4180)."

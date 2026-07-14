@@ -4,17 +4,11 @@
 
 products:
   dev:
-    kabi-us:
-      product: Sodium Chloride
-    fresubin-uk:
-      product: Fresubin Original
+    example-site:
+      product: CHANGE_ME
   stg:
-    kabi-us:
-      product: Sodium Chloride
-    fresubin-uk:
-      product: Fresubin Original
+    example-site:
+      product: CHANGE_ME
   prd:
-    kabi-us:
-      product: Sodium Chloride
-    fresubin-uk:
-      product: Fresubin Original
+    example-site:
+      product: CHANGE_ME

@@ -1,0 +1,36 @@
+environment: dev
+site: example-site
+scenario: complete-e2e
+
+Login with default customer account.
+
+Search for the configured product.
+
+Open the first purchasable product.
+
+Verify:
+- product image exists
+- product name exists
+- product code exists
+- product price exists
+- availability exists
+
+Add product to cart.
+
+Verify:
+- product name
+- subtotal
+- total
+
+Proceed through checkout.
+
+Place order.
+
+Capture order number.
+
+Open order history.
+
+Verify:
+- order exists
+- order number matches
+- order status exists
