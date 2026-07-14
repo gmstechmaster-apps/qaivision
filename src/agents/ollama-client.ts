@@ -7,11 +7,36 @@ export interface OllamaGenerateOptions {
   temperature?: number;
   timeoutMs?: number;
   json?: boolean;
+  /** When true, logs the full request (system/prompt/image count) and the
+   * full raw response to the console, live, as the call happens. */
+  verbose?: boolean;
+  /** Short label identifying the caller (e.g. "planner", "vision:locate") — shown in verbose logs. */
+  label?: string;
 }
 
 export interface OllamaResult {
   raw: string;
   json: unknown | undefined;
+}
+
+let callCounter = 0;
+
+function logRequest(id: number, opts: OllamaGenerateOptions): void {
+  const label = opts.label ?? "ollama";
+  console.log(`\n[ollama →#${id} ${label}] model=${opts.model} images=${opts.images?.length ?? 0} temp=${opts.temperature ?? 0.1}`);
+  if (opts.system) console.log(`  system: ${opts.system}`);
+  console.log(`  prompt: ${opts.prompt}`);
+}
+
+function logResponse(id: number, opts: OllamaGenerateOptions, durationMs: number, raw: string): void {
+  const label = opts.label ?? "ollama";
+  console.log(`[ollama ←#${id} ${label}] model=${opts.model} duration=${(durationMs / 1000).toFixed(1)}s`);
+  console.log(`  response: ${raw}\n`);
+}
+
+function logError(id: number, opts: OllamaGenerateOptions, durationMs: number, err: unknown): void {
+  const label = opts.label ?? "ollama";
+  console.log(`[ollama ✗#${id} ${label}] model=${opts.model} duration=${(durationMs / 1000).toFixed(1)}s FAILED: ${(err as Error).message}\n`);
 }
 
 /**
@@ -20,6 +45,10 @@ export interface OllamaResult {
  * specific model at import time, so swapping models is just a config change.
  */
 export async function ollamaGenerate(opts: OllamaGenerateOptions): Promise<OllamaResult> {
+  const id = ++callCounter;
+  const start = Date.now();
+  if (opts.verbose) logRequest(id, opts);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 120000);
 
@@ -45,16 +74,25 @@ export async function ollamaGenerate(opts: OllamaGenerateOptions): Promise<Ollam
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
-      throw new Error(`Ollama request failed (${res.status}) for model "${opts.model}": ${body}`);
+      const err = new Error(`Ollama request failed (${res.status}) for model "${opts.model}": ${body}`);
+      if (opts.verbose) logError(id, opts, Date.now() - start, err);
+      throw err;
     }
 
     const data = (await res.json()) as { response: string };
     const raw = data.response;
+    if (opts.verbose) logResponse(id, opts, Date.now() - start, raw);
+
     let json: unknown | undefined;
     if (opts.json) {
       json = extractJson(raw);
     }
     return { raw, json };
+  } catch (err) {
+    if (opts.verbose && !(err as Error).message.startsWith("Ollama request failed")) {
+      logError(id, opts, Date.now() - start, err);
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }

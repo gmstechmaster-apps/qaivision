@@ -20,6 +20,7 @@ JSON object:
 interface VisionCallCtx {
   models: ModelsConfig;
   screenshotBase64: string;
+  verbose?: boolean;
 }
 
 export async function locateElement(
@@ -35,6 +36,8 @@ export async function locateElement(
     temperature: ctx.models.vision.temperature,
     timeoutMs: ctx.models.ollama.requestTimeoutMs,
     json: true,
+    verbose: ctx.verbose,
+    label: "vision:locate",
   });
 
   const parsed = json as Partial<VisionLocateResult> | undefined;
@@ -64,6 +67,8 @@ export async function validateExpectation(
     temperature: ctx.models.vision.temperature,
     timeoutMs: ctx.models.ollama.requestTimeoutMs,
     json: true,
+    verbose: ctx.verbose,
+    label: "vision:validate",
   });
 
   const parsed = (json ?? extractJson(raw)) as Partial<VisionValidateResult> | undefined;

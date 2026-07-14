@@ -56,7 +56,7 @@ function nextId(): string {
 
 async function planStep(
   step: NlpStep,
-  ctx: { baseUrl: string; models: ModelsConfig },
+  ctx: { baseUrl: string; models: ModelsConfig; verbose?: boolean },
 ): Promise<PlannedAction[]> {
   if (step.text === "Verify" && step.verifications) {
     return [
@@ -81,6 +81,8 @@ async function planStep(
     temperature: ctx.models.planner.temperature,
     timeoutMs: ctx.models.ollama.requestTimeoutMs,
     json: true,
+    verbose: ctx.verbose,
+    label: "planner",
   });
 
   const parsed = normalizePlannerOutput(json);
@@ -145,6 +147,7 @@ export async function generatePlan(
   ctx: {
     baseUrl: string;
     models: ModelsConfig;
+    verbose?: boolean;
     onStepPlanned?: (info: { index: number; total: number; step: string; durationMs: number }) => void;
   },
 ): Promise<ExecutionPlan> {

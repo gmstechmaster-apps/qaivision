@@ -29,6 +29,7 @@ program
   .option("--headed", "run the browser headed instead of headless", false)
   .option("--live-port <port>", "port for the live execution viewer", "4180")
   .option("--no-live", "disable the live execution viewer")
+  .option("--verbose", "print every Ollama request/response (system prompt, prompt, image count, raw response) live", false)
   .parse(process.argv);
 
 const opts = program.opts<{
@@ -40,6 +41,7 @@ const opts = program.opts<{
   headed: boolean;
   livePort: string;
   live: boolean;
+  verbose: boolean;
 }>();
 
 async function runOne(env: string, site: string, scenario: string): Promise<boolean> {
@@ -62,6 +64,7 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
   const plan = await generatePlan(scenarioDef, {
     baseUrl,
     models,
+    verbose: opts.verbose,
     onStepPlanned: ({ index, total, step, durationMs }) => {
       console.log(`  [plan ${index}/${total}] (${(durationMs / 1000).toFixed(1)}s) ${step}`);
     },
@@ -113,6 +116,7 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
         onReasoning: (entry) => {
           void appendReasoning(paths, entry);
         },
+        verbose: opts.verbose,
       });
 
       results.push(result);

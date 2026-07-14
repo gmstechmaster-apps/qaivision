@@ -11,6 +11,7 @@ export interface ExecutorContext {
   screenshotDir: string;
   onScreenshot: (path: string, base64: string) => void;
   onReasoning: (entry: Record<string, unknown>) => void;
+  verbose?: boolean;
 }
 
 function isAbsoluteUrl(value: string): boolean {
@@ -53,7 +54,7 @@ async function tryFreshScreenshot(
   ctx: ExecutorContext,
 ): Promise<AttemptLog & { locator?: import("playwright").Locator }> {
   const { base64 } = await screenshotBase64(ctx, "locate");
-  const result = await locateElement(action.target ?? action.step, { models: ctx.models, screenshotBase64: base64 });
+  const result = await locateElement(action.target ?? action.step, { models: ctx.models, screenshotBase64: base64, verbose: ctx.verbose });
   if (!result.found || !result.role || !result.label) {
     return {
       strategy: "fresh_screenshot",
@@ -175,7 +176,7 @@ async function tryCoordinates(action: PlannedAction, ctx: ExecutorContext): Prom
   const { base64 } = await screenshotBase64(ctx, "coords");
   const result = await locateElement(
     `${action.target ?? action.step} — respond with approximate normalized coordinates 0-1 in a "coordinates" field {x,y}`,
-    { models: ctx.models, screenshotBase64: base64 },
+    { models: ctx.models, screenshotBase64: base64, verbose: ctx.verbose },
   );
   if (!result.coordinates) {
     return { strategy: "coordinates", reasoning: "Vision agent returned no coordinates", success: false };
@@ -252,6 +253,7 @@ export async function executeAction(action: PlannedAction, ctx: ExecutorContext)
     const result = await validateExpectation(action.expected ?? "", action.verifications ?? [], {
       models: ctx.models,
       screenshotBase64: base64,
+      verbose: ctx.verbose,
     });
     attempts.push({
       strategy: "fresh_screenshot",
