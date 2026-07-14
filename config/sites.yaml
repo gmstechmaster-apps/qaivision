@@ -1,13 +1,19 @@
 # Base storefront URL per environment/site. The Planner Agent resolves the
 # starting URL for a scenario from here — never hardcoded in NLP or code.
+#
+# loginPath is optional and defaults to "/login" if omitted — set it if your
+# site's login page lives somewhere else (e.g. "/my-account/login", "/en/login").
 
 sites:
   dev:
     example-site:
       baseUrl: https://dev.example-site.example.com
+      # loginPath: /login
   stg:
     example-site:
       baseUrl: https://stg.example-site.example.com
+      # loginPath: /login
   prd:
     example-site:
       baseUrl: https://www.example-site.com
+      # loginPath: /login

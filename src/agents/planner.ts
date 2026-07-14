@@ -57,7 +57,7 @@ function nextId(): string {
 
 async function planStep(
   step: NlpStep,
-  ctx: { baseUrl: string; models: ModelsConfig; verbose?: boolean },
+  ctx: { baseUrl: string; loginPath: string; models: ModelsConfig; verbose?: boolean },
 ): Promise<PlannedAction[]> {
   if (step.text === "Verify" && step.verifications) {
     return [
@@ -73,12 +73,12 @@ async function planStep(
   }
 
   // Login is handled deterministically rather than through the LLM: the
-  // login page is always at {baseUrl}/login, so there's nothing for the
-  // model to figure out here, and skipping the call saves time and removes
-  // a source of guesswork (e.g. clicking the wrong "login" link) on a very
-  // common, well-defined step.
+  // login page path is configured per site (config/sites.yaml's loginPath,
+  // default "/login"), so there's nothing for the model to figure out here,
+  // and skipping the call saves time and removes a source of guesswork
+  // (e.g. clicking the wrong "login" link) on a very common, well-defined step.
   if (/\blog[\s-]?in\b/i.test(step.text)) {
-    const loginUrl = new URL("/login", ctx.baseUrl).toString();
+    const loginUrl = new URL(ctx.loginPath, ctx.baseUrl).toString();
     return [
       {
         id: nextId(),
@@ -193,6 +193,7 @@ export async function generatePlan(
   scenario: NlpScenario,
   ctx: {
     baseUrl: string;
+    loginPath: string;
     models: ModelsConfig;
     verbose?: boolean;
     onStepPlanned?: (info: { index: number; total: number; step: string; durationMs: number }) => void;

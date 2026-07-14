@@ -76,17 +76,19 @@ concrete actions at runtime. To add a new test, just add a new `.nlp` file; to
 change what an existing test does, edit its text. No code changes, no rebuild.
 
 Any instruction containing "login"/"log in" is handled deterministically instead
-of going through the LLM: it always navigates straight to `{baseUrl}/login`, then
-types `{{username}}`/`{{password}}` and clicks the login button. This is faster
-and more reliable than asking the model to find a login link to click, since the
-URL convention is already known.
+of going through the LLM: it always navigates straight to `{baseUrl}{loginPath}`
+(`loginPath` defaults to `/login`, configurable per site — see **Configuration**),
+then types `{{username}}`/`{{password}}` and clicks the login button. This is
+faster and more reliable than asking the model to find a login link to click,
+since the URL is already known instead of guessed (and previously, occasionally
+hallucinated).
 
 ## Configuration
 
 | File | Purpose |
 |---|---|
 | `config/models.yaml` | Which Ollama models the Planner and Vision agents use. |
-| `config/sites.yaml` | Base storefront URL per `env`/`site`. |
+| `config/sites.yaml` | Base storefront URL (and optional `loginPath`, default `/login`) per `env`/`site`. |
 | `config/products.yaml` | The product under test per `env`/`site` (`{{product}}` in plans). |
 | `config/credentials.yaml` | Login credentials per `env`/`site` (`{{username}}`/`{{password}}`). Gitignored — copy from `config/credentials.example.yaml`. |
 

@@ -66,7 +66,7 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
   const nlpSource = await readFile(nlpFile, "utf-8");
   const scenarioDef = parseNlp(nlpSource, nlpFile);
 
-  const [{ baseUrl }, product, secrets] = await Promise.all([
+  const [{ baseUrl, loginPath }, product, secrets] = await Promise.all([
     resolveSite(env, site),
     resolveProduct(env, site),
     resolveCredentials(env, site),
@@ -79,7 +79,13 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
     await deleteCachedPlan(env, site, scenario);
   }
 
-  const cacheKey = { nlpSource, baseUrl, plannerModel: models.planner.model, plannerLogicVersion: PLANNER_LOGIC_VERSION };
+  const cacheKey = {
+    nlpSource,
+    baseUrl,
+    loginPath,
+    plannerModel: models.planner.model,
+    plannerLogicVersion: PLANNER_LOGIC_VERSION,
+  };
   const cachedPlan = opts.mode === "execute" ? await loadCachedPlan(env, site, scenario, cacheKey) : undefined;
 
   let plan: ExecutionPlan;
@@ -92,6 +98,7 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
     console.log(`Generating execution plan at runtime via ${models.planner.model} ...`);
     plan = await generatePlan(scenarioDef, {
       baseUrl,
+      loginPath,
       models,
       verbose: opts.verbose,
       onStepPlanned: ({ index, total, step, durationMs }) => {

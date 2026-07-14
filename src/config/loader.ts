@@ -47,7 +47,7 @@ export async function loadModelsConfig(overrides: ModelOverrides = {}): Promise<
 }
 
 interface SitesConfig {
-  sites: Record<string, Record<string, { baseUrl: string }>>;
+  sites: Record<string, Record<string, { baseUrl: string; loginPath?: string }>>;
 }
 
 interface ProductsConfig {
@@ -58,13 +58,13 @@ interface CredentialsConfig {
   credentials: Record<string, Record<string, { username: string; password: string }>>;
 }
 
-export async function resolveSite(env: string, site: string): Promise<{ baseUrl: string }> {
+export async function resolveSite(env: string, site: string): Promise<{ baseUrl: string; loginPath: string }> {
   const cfg = await loadYaml<SitesConfig>("sites.yaml");
   const entry = cfg.sites?.[env]?.[site];
   if (!entry) {
     throw new Error(`No site config for env="${env}" site="${site}" in config/sites.yaml`);
   }
-  return entry;
+  return { baseUrl: entry.baseUrl, loginPath: entry.loginPath ?? "/login" };
 }
 
 export async function resolveProduct(env: string, site: string): Promise<string> {
