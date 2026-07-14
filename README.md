@@ -30,6 +30,18 @@ This installs npm dependencies, installs Playwright's Chromium browser, starts
 `ollama serve` if it isn't already running, and pulls the two models referenced in
 `config/models.yaml`.
 
+If Ollama seems unreachable (requests hang with no error, Activity Monitor shows
+`ollama` staying idle instead of processing) — this usually means `localhost`
+resolved to a different address than Ollama is listening on. Run:
+
+```bash
+./restart-ollama.sh
+```
+
+This kills any running Ollama process and starts a fresh one bound explicitly to
+`127.0.0.1`, matching `config/models.yaml`'s default `ollama.host` — client and
+server always agree on the same address.
+
 Then configure a real site (see **Configuration** below) and run a scenario:
 
 ```bash

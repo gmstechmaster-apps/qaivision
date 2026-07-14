@@ -13,11 +13,15 @@
 # recommended models on a machine with enough headroom and nothing else changes.
 
 ollama:
-  host: http://localhost:11434
+  # Explicit IPv4 loopback, not "localhost" — on some machines "localhost"
+  # resolves to IPv6 (::1) while Ollama only listens on IPv4, so the request
+  # never reaches the server at all. See restart-ollama.sh, which binds
+  # Ollama to this same address.
+  host: http://127.0.0.1:11434
   requestTimeoutMs: 120000
 
 planner:
-  # Recommended: qwen3-coder:32b
+  # Recommended: qwen3-coder:30b
   model: qwen2.5-coder:3b
   temperature: 0.1
 

@@ -16,9 +16,9 @@ echo "==> Installing Playwright's Chromium browser"
 npx playwright install chromium
 
 echo "==> Making sure Ollama is running"
-if ! curl -s -m 2 http://localhost:11434/api/version >/dev/null 2>&1; then
-  echo "Starting 'ollama serve' in the background..."
-  nohup ollama serve > /tmp/ollama-serve.log 2>&1 &
+if ! curl -s -m 2 http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+  echo "Starting 'ollama serve' (bound to 127.0.0.1) in the background..."
+  OLLAMA_HOST=127.0.0.1:11434 nohup ollama serve > /tmp/ollama-serve.log 2>&1 &
   sleep 2
 fi
 
