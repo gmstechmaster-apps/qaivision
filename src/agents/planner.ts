@@ -11,7 +11,7 @@ import type { ActionIntent, ExecutionPlan, PlannedAction } from "./types.js";
  * baseUrl, and planner model are all unchanged — a code fix can never be
  * silently masked by a stale cache entry.
  */
-export const PLANNER_LOGIC_VERSION = 3;
+export const PLANNER_LOGIC_VERSION = 4;
 
 const SYSTEM_PROMPT = `You are the Planner Agent in an AI QA platform for e-commerce storefronts.
 You convert ONE natural-language QA instruction into a JSON array of atomic browser actions.
@@ -57,7 +57,7 @@ function nextId(): string {
 
 async function planStep(
   step: NlpStep,
-  ctx: { baseUrl: string; loginPath: string; models: ModelsConfig; verbose?: boolean },
+  ctx: { baseUrl: string; loginPath?: string; models: ModelsConfig; verbose?: boolean },
 ): Promise<PlannedAction[]> {
   if (step.text === "Verify" && step.verifications) {
     return [
@@ -72,23 +72,36 @@ async function planStep(
     ];
   }
 
-  // Login is handled deterministically rather than through the LLM: the
-  // login page path is configured per site (config/sites.yaml's loginPath,
-  // default "/login"), so there's nothing for the model to figure out here,
-  // and skipping the call saves time and removes a source of guesswork
-  // (e.g. clicking the wrong "login" link) on a very common, well-defined step.
+  // Login is handled deterministically rather than through the LLM — but the
+  // *entry point* depends on whether the site actually has a dedicated login
+  // page. Not every storefront does: some open login as a modal/flyout from
+  // a header link instead of navigating to a separate URL. If loginPath is
+  // explicitly configured (config/sites.yaml), we know a real page exists
+  // and navigate straight there. If it isn't configured, we don't assume —
+  // we click a "Login" link/button instead and let the recovery ladder find
+  // it on whatever the current page is, which works for both page- and
+  // modal-based login. Either way, no LLM call is needed for this step.
   if (/\blog[\s-]?in\b/i.test(step.text)) {
-    const loginUrl = new URL(ctx.loginPath, ctx.baseUrl).toString();
+    const entryAction: PlannedAction = ctx.loginPath
+      ? {
+          id: nextId(),
+          step: step.text,
+          intent: "navigate",
+          target: new URL(ctx.loginPath, ctx.baseUrl).toString(),
+          value: new URL(ctx.loginPath, ctx.baseUrl).toString(),
+          expected: "Login form is visible",
+          retries: 2,
+        }
+      : {
+          id: nextId(),
+          step: step.text,
+          intent: "click",
+          target: "Login/Sign in link or button",
+          expected: "Login form is visible",
+          retries: 2,
+        };
     return [
-      {
-        id: nextId(),
-        step: step.text,
-        intent: "navigate",
-        target: loginUrl,
-        value: loginUrl,
-        expected: "Login form is visible",
-        retries: 2,
-      },
+      entryAction,
       {
         id: nextId(),
         step: step.text,
@@ -239,7 +252,7 @@ export async function generatePlan(
   scenario: NlpScenario,
   ctx: {
     baseUrl: string;
-    loginPath: string;
+    loginPath?: string;
     models: ModelsConfig;
     verbose?: boolean;
     onStepPlanned?: (info: { index: number; total: number; step: string; durationMs: number }) => void;

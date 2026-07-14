@@ -1,8 +1,12 @@
 # Base storefront URL per environment/site. The Planner Agent resolves the
 # starting URL for a scenario from here — never hardcoded in NLP or code.
 #
-# loginPath is optional and defaults to "/login" if omitted — set it if your
-# site's login page lives somewhere else (e.g. "/my-account/login", "/en/login").
+# loginPath is optional and has NO default. If your site has a dedicated login
+# page reachable by URL, set it (e.g. "/login", "/my-account/login", "/en/login")
+# and login will navigate straight there. If you leave it unset, login instead
+# clicks a "Login" link/button and lets the recovery ladder find it wherever it
+# is — this is the safer default for sites where login is a modal/flyout rather
+# than a separate page, since guessing a login URL for those would be wrong.
 
 sites:
   dev:

@@ -58,13 +58,16 @@ interface CredentialsConfig {
   credentials: Record<string, Record<string, { username: string; password: string }>>;
 }
 
-export async function resolveSite(env: string, site: string): Promise<{ baseUrl: string; loginPath: string }> {
+export async function resolveSite(env: string, site: string): Promise<{ baseUrl: string; loginPath?: string }> {
   const cfg = await loadYaml<SitesConfig>("sites.yaml");
   const entry = cfg.sites?.[env]?.[site];
   if (!entry) {
     throw new Error(`No site config for env="${env}" site="${site}" in config/sites.yaml`);
   }
-  return { baseUrl: entry.baseUrl, loginPath: entry.loginPath ?? "/login" };
+  // loginPath is intentionally left undefined when not configured — see
+  // planner.ts's login special-case for why that matters (not every site
+  // has a dedicated login page reachable by URL; some use a modal instead).
+  return { baseUrl: entry.baseUrl, loginPath: entry.loginPath };
 }
 
 export async function resolveProduct(env: string, site: string): Promise<string> {

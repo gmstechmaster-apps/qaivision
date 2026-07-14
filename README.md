@@ -76,12 +76,15 @@ concrete actions at runtime. To add a new test, just add a new `.nlp` file; to
 change what an existing test does, edit its text. No code changes, no rebuild.
 
 Any instruction containing "login"/"log in" is handled deterministically instead
-of going through the LLM: it always navigates straight to `{baseUrl}{loginPath}`
-(`loginPath` defaults to `/login`, configurable per site — see **Configuration**),
-then types `{{username}}`/`{{password}}` and clicks the login button. Instructions
-mentioning "home page" are handled the same way, navigating straight to `baseUrl`.
-This is faster and more reliable than asking the model to guess a link to click,
-since the URL is already known instead of guessed.
+of going through the LLM — but not necessarily by navigating to a URL. If
+`loginPath` is set for the site (see **Configuration**), it navigates straight to
+`{baseUrl}{loginPath}`; if not, it clicks a "Login" link/button instead and lets
+the recovery ladder find it on the current page. Not every storefront has a
+dedicated login page — some open login as a modal/flyout — so navigating to a
+guessed path would be wrong for those; the click-based fallback works for both.
+Either way, it then types `{{username}}`/`{{password}}` and clicks the login
+button, with no LLM call needed. Instructions mentioning "home page" always
+navigate straight to `baseUrl` the same way, since that one's never ambiguous.
 
 More generally: the per-instruction LLM call is never told what `baseUrl` is, so
 it can never legitimately produce a trustworthy on-site URL on its own — only
@@ -96,7 +99,7 @@ to a hallucinated domain by a planner mistake.
 | File | Purpose |
 |---|---|
 | `config/models.yaml` | Which Ollama models the Planner and Vision agents use. |
-| `config/sites.yaml` | Base storefront URL (and optional `loginPath`, default `/login`) per `env`/`site`. |
+| `config/sites.yaml` | Base storefront URL (and optional `loginPath`, no default — see login handling above) per `env`/`site`. |
 | `config/products.yaml` | The product under test per `env`/`site` (`{{product}}` in plans). |
 | `config/credentials.yaml` | Login credentials per `env`/`site` (`{{username}}`/`{{password}}`). Gitignored — copy from `config/credentials.example.yaml`. |
 
