@@ -8,7 +8,7 @@ import { loadModelsConfig, resolveCredentials, resolveProduct, resolveSite } fro
 import { loadNlpScenario } from "../agents/nlp-parser.js";
 import { generatePlan } from "../agents/planner.js";
 import { executeAction } from "../executor/action-executor.js";
-import { appendReasoning, createRunPaths, writeReport, writeStatus } from "../reporter/reporter.js";
+import { appendReasoning, createRunPaths, writePlan, writeReport, writeStatus } from "../reporter/reporter.js";
 import { startLiveServer, type LiveStatus, type LiveStep } from "../reporter/live-server.js";
 import type { StepResult } from "../agents/types.js";
 
@@ -72,7 +72,9 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
   console.log(`Execution plan generated: ${plan.actions.length} actions (not cached, regenerated every run)`);
 
   const paths = await createRunPaths(RUNS_DIR, `${site}-${scenario}`);
+  await writePlan(paths, plan);
   console.log(`Run artifacts: ${paths.runDir}`);
+  console.log(`Generated plan: ${paths.planPath}`);
 
   const startedAt = new Date().toISOString();
   const liveStatus: LiveStatus = {

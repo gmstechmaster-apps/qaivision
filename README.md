@@ -120,6 +120,7 @@ live viewer server), `--planner-model` / `--vision-model` (override for one run)
 Every run writes to `runs/run-{date}-{seq}-{site}-{scenario}/`:
 
 ```
+plan.json        the Planner Agent's generated execution plan, written before execution starts
 screenshots/     one PNG per action
 html/index.html  step-by-step replay (screenshot + reasoning per step)
 report.json      machine-readable summary + per-step attempts

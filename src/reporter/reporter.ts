@@ -1,4 +1,4 @@
-import { mkdir, writeFile, appendFile } from "node:fs/promises";
+import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
 import path from "node:path";
 import type { ExecutionPlan, StepResult } from "../agents/types.js";
 
@@ -10,6 +10,7 @@ export interface RunPaths {
   htmlDir: string;
   reportPath: string;
   reasoningLogPath: string;
+  planPath: string;
 }
 
 /** Creates the runs/{run-id}/ directory tree from spec section 13. */
@@ -41,7 +42,18 @@ export async function createRunPaths(baseDir: string, scenario: string): Promise
     htmlDir,
     reportPath: path.join(runDir, "report.json"),
     reasoningLogPath: path.join(runDir, "reasoning.log"),
+    planPath: path.join(runDir, "plan.json"),
   };
+}
+
+/** Written once, right after the Planner Agent generates the plan and before
+ * execution starts — a clean record of what was generated, independent of
+ * how execution went. Each run gets its own fresh run-{date}-{seq}-.../
+ * directory, so this can never already exist — the explicit delete is just
+ * a guarantee against any stale leftover if a run directory were ever reused. */
+export async function writePlan(paths: RunPaths, plan: ExecutionPlan): Promise<void> {
+  await rm(paths.planPath, { force: true });
+  await writeFile(paths.planPath, JSON.stringify(plan, null, 2), "utf-8");
 }
 
 export async function appendReasoning(paths: RunPaths, entry: Record<string, unknown>): Promise<void> {
