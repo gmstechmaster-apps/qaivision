@@ -5,3 +5,4 @@ runs/*
 *.log
 
 config/credentials.yaml
+.aiqa-cache/

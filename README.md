@@ -7,9 +7,10 @@ only test definition.** On every run, the platform reads the `.nlp` scenario, as
 local LLM (the **Planner Agent**) to turn it into a JSON execution plan, then walks
 that plan step by step — a local vision-language model (the **Vision Agent**) looks
 at a live screenshot to find each element and validate results, and Playwright only
-ever performs mechanical actions (click/type/scroll/select/navigate/upload). Nothing
-is cached between runs: edit the `.nlp` file and the very next run behaves
-differently, with no code changes.
+ever performs mechanical actions (click/type/scroll/select/navigate/upload). The plan
+is cached per `.nlp` file (see **Plan caching** below), keyed to its content — edit
+the file and the very next run regenerates and behaves differently automatically,
+with no code changes.
 
 ```
 NLP Scenario → Planner Agent → Execution Plan → Vision Agent → Playwright Executor
@@ -74,6 +75,12 @@ Nothing here is Playwright syntax — the Planner Agent decomposes each line int
 concrete actions at runtime. To add a new test, just add a new `.nlp` file; to
 change what an existing test does, edit its text. No code changes, no rebuild.
 
+Any instruction containing "login"/"log in" is handled deterministically instead
+of going through the LLM: it always navigates straight to `{baseUrl}/login`, then
+types `{{username}}`/`{{password}}` and clicks the login button. This is faster
+and more reliable than asking the model to find a login link to click, since the
+URL convention is already known.
+
 ## Configuration
 
 | File | Purpose |
@@ -104,6 +111,18 @@ The spec's recommended models are `qwen3-coder:32b` (planner) and `qwen3-vl:32b`
 (`qwen2.5-coder:3b` / `qwen3-vl:8b`) to fit modest disk/VRAM — point it at the 32b
 models on a machine with enough headroom and everything else is unchanged.
 
+### Plan caching
+
+Planning (one LLM call per `.nlp` instruction line) is the slowest part of a run
+with larger local models, so the generated plan is cached at
+`.aiqa-cache/plans/{env}-{site}-{scenario}.json`, keyed to a hash of the `.nlp`
+file's raw text + resolved `baseUrl` + planner model name. If none of those changed
+since the plan was last generated, the cached plan is reused instantly and no LLM
+calls happen during planning at all. Edit the `.nlp` file (or change the site's
+`baseUrl`, or switch planner models) and the hash no longer matches, so the next
+run regenerates automatically — there's no way for a stale plan to silently run.
+Pass `--no-plan-cache` to force regeneration regardless.
+
 ## Running
 
 ```bash
@@ -113,7 +132,9 @@ npm run run -- --env prd --site all --scenario complete-e2e   # every site under
 ```
 
 Flags: `--headed` (show the browser), `--live-port <port>`, `--no-live` (skip the
-live viewer server), `--planner-model` / `--vision-model` (override for one run).
+live viewer server), `--verbose` (print every Ollama request/response live),
+`--no-plan-cache` (always regenerate the plan), `--planner-model` / `--vision-model`
+(override for one run).
 
 ## Run artifacts / replay
 

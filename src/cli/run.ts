@@ -1,16 +1,17 @@
 #!/usr/bin/env node
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { chromium } from "playwright";
 import { loadModelsConfig, resolveCredentials, resolveProduct, resolveSite } from "../config/loader.js";
-import { loadNlpScenario } from "../agents/nlp-parser.js";
+import { parseNlp } from "../agents/nlp-parser.js";
 import { generatePlan } from "../agents/planner.js";
+import { loadCachedPlan, saveCachedPlan } from "../agents/plan-cache.js";
 import { executeAction } from "../executor/action-executor.js";
 import { appendReasoning, createRunPaths, writePlan, writeReport, writeStatus } from "../reporter/reporter.js";
 import { startLiveServer, type LiveStatus, type LiveStep } from "../reporter/live-server.js";
-import type { StepResult } from "../agents/types.js";
+import type { ExecutionPlan, StepResult } from "../agents/types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../..");
@@ -30,6 +31,7 @@ program
   .option("--live-port <port>", "port for the live execution viewer", "4180")
   .option("--no-live", "disable the live execution viewer")
   .option("--verbose", "print every Ollama request/response (system prompt, prompt, image count, raw response) live", false)
+  .option("--no-plan-cache", "always regenerate the plan, even if the .nlp file is unchanged since last time")
   .parse(process.argv);
 
 const opts = program.opts<{
@@ -42,6 +44,7 @@ const opts = program.opts<{
   livePort: string;
   live: boolean;
   verbose: boolean;
+  planCache: boolean;
 }>();
 
 async function runOne(env: string, site: string, scenario: string): Promise<boolean> {
@@ -51,7 +54,8 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
   console.log(`planner model: ${models.planner.model} | vision model: ${models.vision.model}`);
 
   const nlpFile = path.join(TESTS_DIR, env, site, `${scenario}.nlp`);
-  const scenarioDef = await loadNlpScenario(nlpFile);
+  const nlpSource = await readFile(nlpFile, "utf-8");
+  const scenarioDef = parseNlp(nlpSource, nlpFile);
 
   const [{ baseUrl }, product, secrets] = await Promise.all([
     resolveSite(env, site),
@@ -60,16 +64,29 @@ async function runOne(env: string, site: string, scenario: string): Promise<bool
   ]);
 
   console.log(`Reading NLP scenario: ${nlpFile}`);
-  console.log(`Generating execution plan at runtime via ${models.planner.model} ...`);
-  const plan = await generatePlan(scenarioDef, {
-    baseUrl,
-    models,
-    verbose: opts.verbose,
-    onStepPlanned: ({ index, total, step, durationMs }) => {
-      console.log(`  [plan ${index}/${total}] (${(durationMs / 1000).toFixed(1)}s) ${step}`);
-    },
-  });
-  console.log(`Execution plan generated: ${plan.actions.length} actions (not cached, regenerated every run)`);
+
+  const cacheKey = { nlpSource, baseUrl, plannerModel: models.planner.model };
+  const cachedPlan = opts.planCache ? await loadCachedPlan(env, site, scenario, cacheKey) : undefined;
+
+  let plan: ExecutionPlan;
+  if (cachedPlan) {
+    plan = cachedPlan;
+    console.log(
+      `Using cached execution plan — .nlp file unchanged since it was last planned (${plan.actions.length} actions). Pass --no-plan-cache to force regeneration.`,
+    );
+  } else {
+    console.log(`Generating execution plan at runtime via ${models.planner.model} ...`);
+    plan = await generatePlan(scenarioDef, {
+      baseUrl,
+      models,
+      verbose: opts.verbose,
+      onStepPlanned: ({ index, total, step, durationMs }) => {
+        console.log(`  [plan ${index}/${total}] (${(durationMs / 1000).toFixed(1)}s) ${step}`);
+      },
+    });
+    console.log(`Execution plan generated: ${plan.actions.length} actions`);
+    if (opts.planCache) await saveCachedPlan(env, site, scenario, cacheKey, plan);
+  }
 
   const paths = await createRunPaths(RUNS_DIR, `${site}-${scenario}`);
   await writePlan(paths, plan);

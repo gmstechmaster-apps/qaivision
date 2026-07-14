@@ -19,16 +19,7 @@ Rules:
 - Keep the action list minimal but complete: only what's needed to perform the instruction.
 - "expected" describes what should be observably true after the action (used to validate via screenshot).`;
 
-const FEW_SHOT = `Example instruction: "Login with default customer account."
-Example output:
-[
-  {"intent":"navigate","target":"login page link","value":null,"expected":"Login form is visible","verifications":null},
-  {"intent":"type","target":"username/email field","value":"{{username}}","expected":"Username field contains the typed value","verifications":null},
-  {"intent":"type","target":"password field","value":"{{password}}","expected":"Password field contains the typed value","verifications":null},
-  {"intent":"click","target":"Login/Sign in button","value":null,"expected":"User is logged in and account menu is visible","verifications":null}
-]
-
-Example instruction: "Search for the configured product."
+const FEW_SHOT = `Example instruction: "Search for the configured product."
 Example output:
 [
   {"intent":"click","target":"search input field","value":null,"expected":"Search field is focused","verifications":null},
@@ -66,6 +57,52 @@ async function planStep(
         intent: "verify",
         expected: step.verifications.join("; "),
         verifications: step.verifications,
+        retries: 2,
+      },
+    ];
+  }
+
+  // Login is handled deterministically rather than through the LLM: the
+  // login page is always at {baseUrl}/login, so there's nothing for the
+  // model to figure out here, and skipping the call saves time and removes
+  // a source of guesswork (e.g. clicking the wrong "login" link) on a very
+  // common, well-defined step.
+  if (/\blog[\s-]?in\b/i.test(step.text)) {
+    const loginUrl = new URL("/login", ctx.baseUrl).toString();
+    return [
+      {
+        id: nextId(),
+        step: step.text,
+        intent: "navigate",
+        target: loginUrl,
+        value: loginUrl,
+        expected: "Login form is visible",
+        retries: 2,
+      },
+      {
+        id: nextId(),
+        step: step.text,
+        intent: "type",
+        target: "username/email field",
+        value: "{{username}}",
+        expected: "Username field contains the typed value",
+        retries: 2,
+      },
+      {
+        id: nextId(),
+        step: step.text,
+        intent: "type",
+        target: "password field",
+        value: "{{password}}",
+        expected: "Password field contains the typed value",
+        retries: 2,
+      },
+      {
+        id: nextId(),
+        step: step.text,
+        intent: "click",
+        target: "Login/Sign in button",
+        expected: "User is logged in and account menu is visible",
         retries: 2,
       },
     ];
